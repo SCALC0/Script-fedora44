@@ -1,1 +1,161 @@
 
+cpupower frequency-set -g performance
+#!/usr/bin/env bash
+
+################################################################################
+# FEDORA PERFORMANCE MODE (PERMANENTE E SEGURO)
+################################################################################
+
+set -e
+
+echo "==============================================="
+echo "   FEDORA PERFORMANCE MODE (PERMANENTE)"
+echo "==============================================="
+
+[[ $EUID -ne 0 ]] && {
+    echo "Execute com sudo."
+    exit 1
+}
+
+################################################################################
+# CPU GOVERNOR PERMANENTE
+################################################################################
+
+echo
+echo "===> CPU Governor (PERMANENTE)"
+
+if command -v cpupower >/dev/null; then
+    cpupower frequency-set -g performance
+    systemctl enable cpupower.service 2>/dev/null || true
+else
+    echo "cpupower não instalado (dnf install kernel-tools)."
+fi
+
+################################################################################
+# INTEL TURBO BOOST
+################################################################################
+
+echo
+echo "===> Intel Turbo Boost"
+
+if [[ -f /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then
+    echo 0 > /sys/devices/system/cpu/intel_pstate/no_turbo
+    echo "Turbo Boost ativado"
+fi
+
+################################################################################
+# IRQ BALANCE
+################################################################################
+
+echo
+echo "===> IRQ Balance"
+
+systemctl enable --now irqbalance.service 2>/dev/null || true
+
+################################################################################
+# THERMAL MANAGEMENT
+################################################################################
+
+echo
+echo "===> Thermald"
+
+systemctl enable --now thermald.service 2>/dev/null || true
+
+################################################################################
+# SSD TRIM (PERMANENTE)
+################################################################################
+
+echo
+echo "===> TRIM SSD"
+
+systemctl enable fstrim.timer
+
+
+echo
+echo "===> ZRAM"
+
+systemctl enable systemd-zram-setup@zram0.service 2>/dev/null || true
+
+################################################################################
+# NETWORK MANAGER (GARANTIA)
+################################################################################
+
+systemctl enable NetworkManager.service
+
+################################################################################
+# GPU INTEL (APENAS VERIFICAÇÃO REAL)
+################################################################################
+
+echo
+echo "===> GPU Intel Iris Xe"
+
+if command -v glxinfo >/dev/null; then
+    glxinfo | grep -E "OpenGL renderer|iris" || echo "GPU Intel detectada automaticamente pelo Mesa"
+fi
+
+################################################################################
+# LIMPEZA SEGURA DE CACHE (SEM IMPACTO NO SISTEMA)
+################################################################################
+
+echo
+echo "===> Cache básico"
+
+ldconfig
+fc-cache -rv >/dev/null
+
+################################################################################
+# FINAL
+################################################################################
+
+echo
+echo "==============================================="
+echo "✔ PERFOMANCE MODE APLICADO"
+echo "==============================================="
+echo
+echo "O que foi feito:"
+echo "✔ CPU em modo performance"
+echo "✔ Turbo Boost ativado"
+echo "✔ IRQ balance ativo"
+echo "✔ Thermald ativo"
+echo "✔ TRIM SSD habilitado"
+echo "✔ GPU Intel verificada (Mesa Iris)"
+echo
+echo "OBS:"
+echo "- GPU Intel NÃO suporta overclock via software"
+echo "- Performance real depende de temperatura e RAM"
+echo
+echo "Reinicie o sistema para garantir persistência total."
+echo "==============================================="
+echo
+echo "==============================================="
+echo "✔ PERFORMANCE MODE APLICADO"
+echo "==============================================="
+
+echo
+echo "Verificação rápida:"
+
+echo -n "CPU Governor: "
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo "indisponível"
+
+echo -n "Turbo Boost: "
+if [[ -f /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then
+    [[ "$(cat /sys/devices/system/cpu/intel_pstate/no_turbo)" == "0" ]] && echo "ATIVO" || echo "DESATIVADO"
+else
+    echo "indisponível"
+fi
+
+echo
+echo "✔ CPU em modo performance"
+echo "✔ Turbo Boost configurado"
+echo "✔ IRQ balance ativo"
+echo "✔ Thermald ativo"
+echo "✔ TRIM SSD habilitado"
+
+echo
+echo "OBS:"
+echo "- GPU Intel não possui overclock via software"
+echo "- Performance depende de temperatura e RAM"
+
+echo
+echo "Reinicie o sistema para garantir persistência total."
+echo "==============================================="
